@@ -7,7 +7,7 @@ langchain==0.1.0
 langchain-google-genai==0.0.6
 pypdf==4.0.1
 sentence-transformers==2.2.2
-speech-recognition==3.10.0
+SpeechRecognition==3.8.1
 pyttsx3==2.90
 gtts==2.4.0
 pydub==0.25.1
