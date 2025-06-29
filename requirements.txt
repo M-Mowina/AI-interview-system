@@ -1,13 +1,11 @@
-google-genai==0.3.0
+google-genai
 python-dotenv==1.0.0
 streamlit==1.28.0
-langgraph==0.0.40
-chromadb==0.4.22
-langchain==0.1.0
-langchain-google-genai==0.0.6
+langgraph
+langchain
+langchain-google-genai
 pypdf==4.0.1
-sentence-transformers==2.2.2
-SpeechRecognition==3.8.1
+SpeechRecognition
 pyttsx3==2.90
 gtts==2.4.0
 pydub==0.25.1
@@ -16,7 +14,5 @@ numpy==1.24.3
 matplotlib==3.7.2
 seaborn==0.12.2
 plotly==5.17.0
-jupyter==1.0.0
-ipywidgets==8.1.1
 fpdf2==2.7.6
 jinja2==3.1.2 

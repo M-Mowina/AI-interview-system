@@ -10,7 +10,7 @@ from langgraph.graph.message import add_messages
 
 # Import agents
 from src.agents.persona_generator import PersonaGenerator
-from src.agents.question_manager import QuestionManager
+from src.agents.question_manager_simple import QuestionManager
 from src.agents.speech_manager import SpeechManager
 from src.agents.response_evaluator import ResponseEvaluator
 from src.agents.report_generator import ReportGenerator
