@@ -1,41 +1,48 @@
 # AI Interview System
 
-This project aims to build an AI-powered interview assistant system. The system will leverage advanced language models to conduct, assess, and provide feedback for technical interviews, starting with Data Scientist roles.
+This project is an AI-powered interview system designed to facilitate automated interviews using advanced language models and speech processing tools.
 
-## Status
+## Features
+- Automated interview question generation
+- Real-time audio processing
+- Integration with ElevenLabs and Streamlit
+- WebRTC support for live audio/video
 
-**This project is currently under development.**
+## Requirements
+Install the dependencies listed in `requirements.txt`:
 
-## Getting Started
+```bash
+pip install -r requirements.txt
+```
 
-The main entry point for the project is `app.py`.
+## Usage
 
----
+### Streamlit App
+To run the Streamlit-based interview app:
 
-## Agent Architecture & Logic
+```bash
+streamlit run beta_streamlit_app.py
+```
 
-The system is composed of five modular agents, each responsible for a key part of the interview workflow:
+Or, for the alternative app:
 
-### 1. Persona Generator
-- **Purpose:** Customizes the interviewer persona based on company, role, and preferences.
-- **Logic:** Uses prompt engineering (and optionally LLM) to generate a system prompt that defines the interviewer's style, tone, focus areas, and introduction. This ensures the AI interviewer can adapt to different companies and job roles.
+```bash
+streamlit run src/beta_app.py
+```
 
-### 2. Speech Manager
-- **Purpose:** Handles speech-to-text (STT) and text-to-speech (TTS) for voice-based interviews.
-- **Logic:** Uses libraries like `speech_recognition` (Google API, Whisper, etc.) for converting user speech to text, and `pyttsx3` or `gTTS` for converting AI responses to audio. Supports both offline and online TTS, and can test microphone and playback.
+### Audio Processing
+Some features require audio input/output. Ensure your microphone and speakers are configured properly.
 
-### 3. Question Manager
-- **Purpose:** Selects and manages interview questions tailored to the role and interview stage.
-- **Logic:** Uses a vector database (ChromaDB) to store and retrieve questions by role, category, and difficulty. Can generate follow-up questions using an LLM based on candidate responses. Tracks which questions have been asked and manages the flow (introduction, technical, behavioral, etc.).
+## Project Structure
+- `beta_streamlit_app.py`: Main Streamlit app
+- `src/beta_app.py`: Alternative Streamlit app
+- `corrected_interview.py`: Interview logic
+- `notebooks/`: Jupyter notebooks for experiments
+- `utils/`: Utility files and resources
 
-### 4. Response Evaluator
-- **Purpose:** Evaluates candidate answers for quality, correctness, and communication.
-- **Logic:** Combines LLM-based evaluation (clarity, confidence, technical correctness, etc.) with rule-based metrics (length, technical terms, specificity). Produces a composite score and detailed feedback for each response.
+## Notes
+- Make sure to configure your `.env` file with the necessary API keys and environment variables.
+- For ElevenLabs and OpenAI Whisper, you may need API access.
 
-### 5. Report Generator
-- **Purpose:** Summarizes the interview session and generates feedback reports for HR or the candidate.
-- **Logic:** Aggregates all evaluations, generates an executive summary and recommendations using the LLM, and can output the report as PDF/HTML/JSON. Supports sending the report via email to HR or the candidate.
-
----
-
-Stay tuned for updates and more features soon! 
+## License
+This project is for educational and research purposes. 
