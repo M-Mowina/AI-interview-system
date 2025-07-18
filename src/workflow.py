@@ -1,30 +1,25 @@
 # src/workflow.py
+# Standard library imports
+import os
+# Type annotations
+from typing import Dict, Any, List, TypedDict, Annotated, Sequence
+from operator import add
+# LangGraph imports
 from langgraph.graph import StateGraph, START, END
 from langgraph.prebuilt import ToolNode, tools_condition
 from langgraph.graph.message import add_messages
-from typing import Annotated, TypedDict, Sequence
-from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, ToolMessage, BaseMessage
+# LangChain imports
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, BaseMessage
+from langchain_core.tools import tool
 from langchain.prompts import PromptTemplate
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain.chat_models import init_chat_model
+from langchain.tools.retriever import create_retriever_tool
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_chroma import Chroma
 from langchain_community.document_loaders import PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from operator import add
-from langchain_core.tools import tool
-import os
-#from src.pdf_utils import generate_pdf
-from langchain.tools.retriever import create_retriever_tool
-from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.lib.enums import TA_CENTER, TA_LEFT
-
-# --- AgentState definition ---
-# Using a TypedDict with annotations for LangGraph state management
-from typing import Dict, Any, List, TypedDict, Annotated, Sequence
-from operator import add
-from langgraph.graph.message import add_messages
+# PDF generation
+from src.pdf_utils import generate_pdf
 
 class AgentState(TypedDict):
     mode: str
@@ -123,15 +118,10 @@ report_writer_prompt = PromptTemplate(
         ---
         **Evaluation Report:**
         {evaluation_report}
-
-        Dont forget to use `save_report_as_pdf` tool to save the report in a pdf.
         """
 )
 
-# --- Placeholder for tools, retriever, etc. ---
-# These should be initialized in the Streamlit app or a setup function
-# retriever_tool = None
-# resume_retriever_tool = None
+# --- Vector Store and Retriever Setup ---
 
 # === BEGIN: Tool Initialization ===
 # Placeholder PDF paths (update as needed)
@@ -171,87 +161,23 @@ resume_retriever_tool = create_retriever_tool(
 )
 # === END: Tool Initialization ===
 
-@tool
-def save_report_as_pdf(report_content: str, filename: str) -> str:
-    """
-    Saves the provided report content as a PDF file.
+# PDF generator node function defined below
 
-    Args:
-        report_content (str): The full text content of the HR report.
-        filename (str): The desired name for the PDF file (e.g., "HR_Interview_Report_CandidateX.pdf").
-                        Do NOT include path, just the filename. The file will be saved in the current directory.
-
-    Returns:
-        str: The full path to the saved PDF file if successful, otherwise an error message.
-    """
-    if not filename.endswith(".pdf"):
-        filename += ".pdf"
+def pdf_generator_node(state: AgentState) -> AgentState:
+    """Generate PDF from the report content"""
+    if not state.get("report"):
+        return {"pdf_path": None}
     
-    safe_filename = os.path.basename(filename)
-
+    # Generate a meaningful filename
+    filename = f"HR_Report_{state['company_name']}_{state['position']}.pdf".replace(" ", "_")
+    
     try:
-        doc = SimpleDocTemplate(safe_filename, pagesize=letter)
-        styles = getSampleStyleSheet()
-        
-        # --- MODIFIED PART START ---
-        # Use existing styles or create new ones by copying and modifying,
-        # rather than trying to add names that already exist.
-
-        # Example: Use 'h1' for main title, 'h2' for section titles, 'Normal' for body text.
-        # You can adjust attributes of these copied styles if needed.
-        
-        # Adjust 'h1' for center alignment (it's usually left by default)
-        h1_style = styles['h1']
-        h1_style.alignment = TA_CENTER
-        h1_style.spaceAfter = 14 # Add some space after the heading
-
-        # Adjust 'h2' for left alignment (it's usually left by default)
-        h2_style = styles['h2']
-        h2_style.alignment = TA_LEFT
-        h2_style.spaceAfter = 8 # Add some space after the subheading
-
-        # Use 'Normal' style for body text
-        body_style = styles['Normal']
-        body_style.spaceAfter = 6 # Small space after body paragraphs
-
-        # --- MODIFIED PART END ---
-
-        story = []
-        
-        # Add a title
-        story.append(Paragraph("HR Interview Report", h1_style))
-        story.append(Spacer(1, 0.2 * letter[1])) # Add some space
-
-        # Split the report content into paragraphs, preserving newlines
-        paragraphs = report_content.split('\n\n')
-        
-        for para_text in paragraphs:
-            if para_text.strip(): # Avoid empty paragraphs
-                # Check for specific section headings from your prompt's expected output
-                if para_text.strip().startswith((
-                    'Candidate\'s Overall Suitability:',
-                    'Strengths:',
-                    'Areas for Development/Weaknesses:',
-                    'Key Technical Skills Demonstrated:',
-                    'Problem-Solving Approach:',
-                    'Communication Skills:',
-                    'Relevant Experience Highlights:',
-                    'Recommendations:'
-                )):
-                    story.append(Paragraph(para_text, h2_style)) # Use h2 style for sections
-                else:
-                    story.append(Paragraph(para_text, body_style)) # Use Normal style for body content
-                story.append(Spacer(1, 0.1 * letter[1])) # Add a small space after each paragraph
-
-        doc.build(story)
-        return f"Report successfully saved to: {os.path.abspath(safe_filename)}"
+        # Call the generate_pdf function directly
+        pdf_path = generate_pdf(state["report"], filename=filename)
+        return {"pdf_path": pdf_path}
     except Exception as e:
-        # It's good to print the full traceback for debugging during development
-        import traceback
-        traceback.print_exc()
-        return f"Error saving report as PDF: {e}"
-
-report_writer_tools = [save_report_as_pdf]
+        print(f"Error generating PDF: {str(e)}")
+        return {"pdf_path": None}
 
 def recruiter(state: AgentState) -> AgentState:
     sys_prompt = SystemMessage(content=interviewer_prompt.format(
@@ -310,7 +236,7 @@ def report_writer(state: AgentState) -> AgentState:
     sys_message = SystemMessage(content=sys_prompt)
     # Fix: Use a proper HumanMessage instead of a string
     all_messages = [sys_message, HumanMessage(content="Generate the HR report")]
-    result = llm.bind_tools(report_writer_tools).invoke(all_messages)
+    result = llm.invoke(all_messages)
     return {"report": result.content}
 
 def custom_tools_condition(state):
@@ -358,8 +284,7 @@ def build_workflow():
     evaluator_tool_node = ToolNode([retriever_tool])
     workflow.add_node("evaluator_tools", evaluator_tool_node)
     workflow.add_node("report_writer", report_writer)
-    report_writer_tool_node = ToolNode([save_report_as_pdf])
-    workflow.add_node("report_writer_tools", report_writer_tool_node)
+    workflow.add_node("pdf_generator", pdf_generator_node)
     # Add edges as in the notebook (custom_tools_condition, etc.)
     # ...
     workflow.set_entry_point("recruiter")
@@ -396,13 +321,10 @@ def build_workflow():
     workflow.add_edge("evaluator", "report_writer")
 
     # Define edges for report writer node
-    workflow.add_conditional_edges(
-        "report_writer",
-        tools_condition,
-        {
-            "tools": "report_writer_tools",
-            END: END
-        }
-    )
+    # Add edge from report_writer to pdf_generator
+    workflow.add_edge("report_writer", "pdf_generator")
+
+    # Add edge from pdf_generator to END
+    workflow.add_edge("pdf_generator", END)
 
     return workflow.compile()
