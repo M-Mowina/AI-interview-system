@@ -3,11 +3,11 @@ import streamlit as st
 import wave
 import tempfile
 from audio_recorder_streamlit import audio_recorder
-from utils.audio_utils import transcribe_audio_file, elevenlabs_tts
+from utils.audio_utils import whisper_transcribe, elevenlabs_tts
 from src.beta_app import app as langgraph_app, init_state
 from langchain_core.messages import HumanMessage
 
-st.set_page_config(page_title="AI Voice Interviewer", layout="wide")
+st.set_page_config(page_title="AI Voice Interviewer (Whisper)", layout="wide")
 
 # --- Session State ---
 if "conversation" not in st.session_state:
@@ -21,15 +21,42 @@ with st.sidebar:
     st.markdown("""
     - Record your question and submit
     - AI will respond with voice and text
-    - Powered by LangGraph, AssemblyAI, and ElevenLabs
+    - Powered by LangGraph, Whisper, and ElevenLabs
+    """)
+    
+    # Whisper model selection
+    st.subheader("Whisper Settings")
+    model_size = st.selectbox(
+        "Whisper Model Size",
+        ["tiny", "base", "small", "medium", "large"],
+        index=1,  # Default to "base"
+        help="Larger models are more accurate but slower"
+    )
+    
+    st.info(f"""
+    **Model Sizes:**
+    - tiny: ~39MB, fastest
+    - base: ~74MB, good balance (default)
+    - small: ~244MB, better accuracy
+    - medium: ~769MB, high accuracy
+    - large: ~1550MB, best accuracy
     """)
 
 # --- Main Interface ---
-st.title("AI Voice Interviewer (LangGraph)")
+st.title("AI Voice Interviewer (LangGraph + Whisper)")
 MAX_RECORD_SECONDS = 30
 st.subheader("Flexible Voice Conversation with AI Agent")
 st.info(f"Please keep your recording under {MAX_RECORD_SECONDS} seconds for best results.")
-audio_bytes = audio_recorder()
+
+# Simple audio recorder with better UI
+st.info("💡 **Tip**: Click the microphone button to start recording, then click it again to stop. The recording will process automatically.")
+audio_bytes = audio_recorder(
+    text="🎤 Click to start/stop recording",
+    recording_color="#e74c3c",
+    neutral_color="#95a5a6",
+    icon_name="microphone",
+    icon_size="2x"
+)
 
 if audio_bytes:
     with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
@@ -45,8 +72,8 @@ if audio_bytes:
         os.remove(audio_path)
     else:
         st.audio(audio_bytes, format="audio/wav")
-        with st.status("Transcribing audio with AssemblyAI...", expanded=True) as status:
-            transcribed_text, stt_error = transcribe_audio_file(audio_path)
+        with st.status(f"Transcribing audio with Whisper ({model_size} model)...", expanded=True) as status:
+            transcribed_text, stt_error = whisper_transcribe(audio_path, model_size=model_size)
             if stt_error:
                 status.update(label="Transcription failed", state="error")
                 st.error(stt_error)
@@ -76,3 +103,13 @@ if st.session_state.conversation:
     st.subheader("Conversation History")
     for speaker, text in st.session_state.conversation:
         st.markdown(f"**{speaker}:** {text}")
+
+# --- Footer ---
+st.markdown("---")
+st.markdown("""
+**Powered by:**
+- **Whisper** (OpenAI) - Speech-to-Text
+- **ElevenLabs** - Text-to-Speech  
+- **LangGraph** - AI Agent
+- **Streamlit** - Web Interface
+""") 
