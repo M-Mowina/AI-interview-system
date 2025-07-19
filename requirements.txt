@@ -3,7 +3,7 @@ streamlit>=1.24.0
 python-dotenv>=1.0.0
 
 # LangChain and LangGraph dependencies
-langchain
+langchain==0.3.26
 langchain_google_genai
 langchain-community
 langchain-core
