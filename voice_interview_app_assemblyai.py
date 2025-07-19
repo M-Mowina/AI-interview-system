@@ -215,7 +215,7 @@ def process_message(user_input):
             # Generate and play voice response if using voice input
             if input_method == "Voice" and os.getenv("ELEVENLABS_API_KEY"):
                 with st.spinner("Generating voice response..."):
-                    audio_path, tts_error = elevenlabs_tts(ai_text)
+                    audio_path, tts_error = elevenlabs_tts(ai_text, os.getenv("ELEVENLABS_API_KEY"))
                     if tts_error:
                         st.error(f"Voice generation failed: {tts_error}")
                     elif audio_path:
