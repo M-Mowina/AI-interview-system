@@ -3,7 +3,7 @@ import requests
 import time
 import tempfile
 import assemblyai as aai
-from elevenlabs import generate
+from elevenlabs.client import ElevenLabs
 import httpx
 import whisper
 
@@ -92,22 +92,46 @@ def whisper_transcribe(audio_file_path, model_size="base", language="en"):
     except Exception as e:
         return None, f"Whisper transcription failed: {str(e)}"
 
-# ElevenLabs TTS (older method, returns path to temp mp3 file or error)
+# ElevenLabs TTS (for version 2.7.1 with client API, returns path to temp mp3 file or error)
 def elevenlabs_tts(text, api_key=None, voice_id="JBFqnCBsd6RMkjVDRZzb"):
+    """
+    Generates speech from text using ElevenLabs API (version 2.7.1) and saves it to a temporary MP3 file.
+
+    Args:
+        text (str): The text to convert to speech.
+        api_key (str, optional): Your ElevenLabs API key. If not provided, it will attempt
+                                 to use the ELEVENLABS_API_KEY environment variable.
+        voice_id (str): The ID of the ElevenLabs voice to use.
+                        Default is "JBFqnCBsd6RMkjVDRZzb".
+
+    Returns:
+        tuple: (audio_path, error_message) or (None, error_message) if failed
+    """
     if not text:
         return None, "Empty text input"
+    
     try:
-        audio_stream = generate(
-            api_key=api_key or os.getenv("ELEVENLABS_API_KEY"),
+        # Initialize the ElevenLabs client
+        client = ElevenLabs(api_key=api_key or ELEVENLABS_API_KEY)
+        
+        # Convert text to speech using the client API
+        audio_bytes = client.text_to_speech.convert(
             text=text,
-            voice=voice_id,
-            stream=True
+            voice_id=voice_id,
+            model_id="eleven_multilingual_v2",
+            output_format="mp3_44100_128"
         )
-        import tempfile
+        
+        # Save the audio to a temporary file
         with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as tmp_audio:
-            for chunk in audio_stream:
-                tmp_audio.write(chunk)
+            if isinstance(audio_bytes, bytes):
+                tmp_audio.write(audio_bytes)
+            else:  # Handle streaming response if returned
+                for chunk in audio_bytes:
+                    if chunk:
+                        tmp_audio.write(chunk)
             audio_path = tmp_audio.name
+            
         return audio_path, None
     except Exception as e:
-        return None, str(e) 
+        return None, str(e)
