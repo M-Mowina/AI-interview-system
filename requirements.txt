@@ -4,9 +4,9 @@ python-dotenv>=1.0.0
 
 # LangChain and LangGraph dependencies
 langchain
+langchain_google_genai
 langchain-community
 langchain-core
-langchain-google-genai
 langchain-text-splitters
 langgraph
 langgraph-sdk
