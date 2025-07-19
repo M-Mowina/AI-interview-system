@@ -10,9 +10,9 @@ langgraph>=0.0.20
 langchain-community>=0.0.10
 
 # Vector stores
-pysqlite3-binary>=0.5.0
-langchain-chroma>=0.0.1
-chromadb>=0.4.18
+langchain-chroma
+chromadb
+pysqlite3-binary
 
 # Document processing
 pypdf>=3.15.1
