@@ -27,7 +27,7 @@ langchain-community>=0.0.10
 # Audio processing
 openai-whisper>=20231117
 assemblyai>=0.17.0
-elevenlabs==0.3.0b0
+elevenlabs
 audio-recorder-streamlit>=0.0.8
 av>=10.0.0  # Required for audio processing
 
