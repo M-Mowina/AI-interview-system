@@ -1,12 +1,28 @@
-import streamlit as st
-from src.workflow_with_dynamic_resume import build_workflow, AgentState
-from langchain_core.messages import HumanMessage, AIMessage, ToolMessage, SystemMessage, BaseMessage
 import os
-import json
-import pprint
+import streamlit as st
+import wave
+import tempfile
+import time
+from audio_recorder_streamlit import audio_recorder
+from utils.audio_utils import transcribe_audio_file, elevenlabs_tts
+from src.dynamic_workflow import build_workflow, AgentState
+from langchain_core.messages import HumanMessage, AIMessage, ToolMessage, SystemMessage, BaseMessage
+from dotenv import load_dotenv
 
-st.set_page_config(page_title="Alpha Interview System", layout="wide")
-st.title("Alpha AI Interview System")
+# Load environment variables
+load_dotenv()
+
+# Check if AssemblyAI API key is set
+if not os.getenv("ASSEMBLYAI_API_KEY"):
+    st.error("⚠️ AssemblyAI API key not found. Please set the ASSEMBLYAI_API_KEY environment variable.")
+
+# Check if ElevenLabs API key is set
+if not os.getenv("ELEVENLABS_API_KEY"):
+    st.warning("⚠️ ElevenLabs API key not found. Voice responses will not be available.")
+
+st.set_page_config(page_title="Talent Talk", layout="wide")
+st.title("Talent Talk")
+st.markdown("*AI-powered technical interviews with cloud-based voice interaction*")
 
 # Function to display the app state
 def display_app_state():
@@ -99,6 +115,10 @@ if questions_file:
         f.write(questions_file.read())
     st.sidebar.success(f"Questions uploaded: {questions_file.name}")
 
+# Voice settings
+st.sidebar.header("Voice Settings")
+input_method = st.sidebar.radio("Input Method", ["Text", "Voice"], index=0)
+
 # --- Initialize workflow ---
 workflow = build_workflow()
 
@@ -130,20 +150,15 @@ else:
         st.session_state.state["questions_path"] = questions_path
         st.sidebar.info("Interview questions updated. The interviewer will use your new questions.")
 
-# --- Main App: Interview Loop ---
-st.header("Interview")
-user_input = st.text_input("Your answer (as candidate):", "")
-if st.button("Send") and user_input:
-    # Add the human message to the state
-    st.session_state.state["messages"].append(HumanMessage(content=user_input))
-    
+# Function to process messages (both text and voice)
+def process_message(user_input):
     # Check if the last AI message contains "that's it for today" to detect end of interview
     interview_ended = False
     if st.session_state.state["messages"]:
         for msg in reversed(st.session_state.state["messages"]):
             if isinstance(msg, AIMessage) and "that's it for today" in msg.content.lower():
                 interview_ended = True
-                st.info("Interview has ended. Generating evaluation and report...")
+                st.info("Interview has ended. You can generate the evaluation and report.")
                 break
     
     # Create a fresh state dictionary for the workflow
@@ -157,13 +172,14 @@ if st.button("Send") and user_input:
         evaluation_result="" if interview_ended else st.session_state.state.get("evaluation_result", ""),
         report="" if interview_ended else st.session_state.state.get("report", ""),
         pdf_path=st.session_state.state.get("pdf_path"),
-        resume_path=st.session_state.state.get("resume_path"),  # Include the resume path
-        questions_path=st.session_state.state.get("questions_path")  # Include the questions path
+        resume_path=st.session_state.state.get("resume_path"),
+        questions_path=st.session_state.state.get("questions_path")
     )
     
     try:
         # Run the workflow step
-        result = workflow.invoke(current_state)
+        with st.spinner("AI is thinking..."):
+            result = workflow.invoke(current_state)
         
         # Update session state with the result
         for key, value in result.items():
@@ -182,11 +198,88 @@ if st.button("Send") and user_input:
             else:
                 # Update other fields normally
                 st.session_state.state[key] = value
+        
+        # Get the AI's response
+        ai_message = st.session_state.state["messages"][-1]
+        if isinstance(ai_message, AIMessage):
+            ai_text = ai_message.content
+            
+            # Display the AI's text response
+            st.subheader("AI Response")
+            st.write(ai_text)
+            
+            # Generate and play voice response if using voice input
+            if input_method == "Voice" and os.getenv("ELEVENLABS_API_KEY"):
+                with st.spinner("Generating voice response..."):
+                    audio_path, tts_error = elevenlabs_tts(ai_text)
+                    if tts_error:
+                        st.error(f"Voice generation failed: {tts_error}")
+                    elif audio_path:
+                        st.subheader("AI Voice Response")
+                        st.audio(audio_path, format="audio/mp3")
                 
     except Exception as e:
         st.error(f"An error occurred: {str(e)}")
         import traceback
         st.error(traceback.format_exc())
+
+# --- Main App: Interview Loop ---
+st.header("Interview")
+
+# Voice input
+if input_method == "Voice":
+    MAX_RECORD_SECONDS = 30
+    st.info(f"Please keep your recording under {MAX_RECORD_SECONDS} seconds for best results.")
+    st.info("💡 **Tip**: Click the microphone button to start recording, then click it again to stop. The recording will process automatically.")
+    
+    audio_bytes = audio_recorder(
+        text="🎤 Click to start/stop recording",
+        recording_color="#e74c3c",
+        neutral_color="#95a5a6",
+        icon_name="microphone",
+        icon_size="2x"
+    )
+    
+    if audio_bytes:
+        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
+            tmp.write(audio_bytes)
+            audio_path = tmp.name
+        
+        # Check duration
+        with wave.open(audio_path, "rb") as wf:
+            frames = wf.getnframes()
+            rate = wf.getframerate()
+            duration = frames / float(rate)
+        
+        if duration > MAX_RECORD_SECONDS:
+            st.error(f"Recording is {duration:.1f} seconds. Please record less than {MAX_RECORD_SECONDS} seconds.")
+            os.remove(audio_path)
+        else:
+            st.audio(audio_bytes, format="audio/wav")
+            with st.status("Transcribing audio with AssemblyAI...", expanded=True) as status:
+                transcribed_text, stt_error = transcribe_audio_file(audio_path)
+                if stt_error:
+                    status.update(label="Transcription failed", state="error")
+                    st.error(stt_error)
+                elif transcribed_text:
+                    status.update(label="Transcription complete!", state="complete")
+                    st.subheader("Transcription")
+                    st.write(transcribed_text)
+                    
+                    # Add the human message to the state
+                    st.session_state.state["messages"].append(HumanMessage(content=transcribed_text))
+                    
+                    # Process the message
+                    process_message(transcribed_text)
+else:
+    # Text input
+    user_input = st.text_input("Your answer (as candidate):", "")
+    if st.button("Send") and user_input:
+        # Add the human message to the state
+        st.session_state.state["messages"].append(HumanMessage(content=user_input))
+        
+        # Process the message
+        process_message(user_input)
 
 # --- Display Transcript ---
 st.subheader("Transcript")
@@ -226,7 +319,7 @@ if interview_ended and not st.session_state.state.get("evaluation_result"):
             
             # First, run the evaluator with retry logic
             with st.spinner("Generating evaluation..."):
-                from src.workflow_with_dynamic_resume import evaluator
+                from src.dynamic_workflow import evaluator
                 max_retries = 3
                 retry_count = 0
                 
@@ -250,7 +343,7 @@ if interview_ended and not st.session_state.state.get("evaluation_result"):
             
             # Then, run the report writer with retry logic
             with st.spinner("Generating report..."):
-                from src.workflow_with_dynamic_resume import report_writer
+                from src.dynamic_workflow import report_writer
                 current_state["evaluation_result"] = st.session_state.state["evaluation_result"]
                 
                 retry_count = 0
@@ -270,7 +363,7 @@ if interview_ended and not st.session_state.state.get("evaluation_result"):
             
             # Finally, generate the PDF
             with st.spinner("Generating PDF..."):
-                from src.workflow_with_dynamic_resume import pdf_generator_node
+                from src.dynamic_workflow import pdf_generator_node
                 current_state["report"] = st.session_state.state["report"]
                 pdf_result = pdf_generator_node(current_state)
                 st.session_state.state["pdf_path"] = pdf_result["pdf_path"]
@@ -292,15 +385,64 @@ if st.session_state.state.get("report"):
     st.subheader("HR Report")
     st.markdown(st.session_state.state["report"])
     
+    # Display PDF path for debugging
+    pdf_path = st.session_state.state.get("pdf_path")
+    if pdf_path:
+        st.info(f"PDF path: {pdf_path}")
+    else:
+        st.warning("PDF path is not set. Generating PDF now...")
+        # Generate PDF directly if path is not set
+        try:
+            from src.dynamic_workflow import generate_pdf
+            filename = f"HR_Report_{st.session_state.state['company_name']}_{st.session_state.state['position']}.pdf".replace(" ", "_")
+            pdf_path = generate_pdf(st.session_state.state["report"], filename=filename)
+            st.session_state.state["pdf_path"] = pdf_path
+            st.success(f"PDF generated at: {pdf_path}")
+        except Exception as e:
+            st.error(f"Error generating PDF: {str(e)}")
+    
     # Display PDF download button if PDF path is available
-    if st.session_state.state.get("pdf_path") and os.path.exists(st.session_state.state["pdf_path"]):
-        with open(st.session_state.state["pdf_path"], "rb") as f:
+    if pdf_path and os.path.exists(pdf_path):
+        with open(pdf_path, "rb") as f:
+            pdf_data = f.read()
             st.download_button(
-                "Download PDF Report", 
-                f, 
-                file_name=os.path.basename(st.session_state.state["pdf_path"])
+                "📥 Download PDF Report", 
+                pdf_data, 
+                file_name=os.path.basename(pdf_path),
+                mime="application/pdf"
             )
+        st.success("✅ PDF report is ready for download!")
+    elif pdf_path:
+        st.error(f"PDF file not found at path: {pdf_path}")
+        
+        # Try to find the file in the generated_reports directory
+        generated_dir = "./generated_reports"
+        if os.path.exists(generated_dir):
+            pdf_files = [f for f in os.listdir(generated_dir) if f.endswith('.pdf')]
+            if pdf_files:
+                st.info(f"Found {len(pdf_files)} PDF files in the generated_reports directory:")
+                for pdf_file in pdf_files:
+                    full_path = os.path.join(generated_dir, pdf_file)
+                    with open(full_path, "rb") as f:
+                        st.download_button(
+                            f"📥 Download {pdf_file}", 
+                            f, 
+                            file_name=pdf_file,
+                            mime="application/pdf"
+                        )
 
 # --- Display App State ---
 st.sidebar.markdown("---")
 display_app_state()
+
+# --- Footer ---
+st.markdown("---")
+st.markdown("""
+**Talent Talk** | Revolutionizing technical interviews with AI
+
+**Powered by:**
+- **AssemblyAI** - Speech-to-Text
+- **ElevenLabs** - Text-to-Speech  
+- **LangGraph** - AI Agent
+- **Streamlit** - Web Interface
+""")

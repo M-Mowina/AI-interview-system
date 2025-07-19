@@ -1,0 +1,54 @@
+Starting interview...
+AI Recruiter:
+
+==================================[1m Ai Message [0m==================================
+
+Hi there! I'm your interviewer from Tech Innovators Inc. for the AI Developer position. Could you please start by introducing yourself?
+AI Recruiter:
+
+==================================[1m Ai Message [0m==================================
+
+That's great, Mohamed! It's nice to meet you.
+
+I see you have experience with the "TalentTalk AI interview system" project. Could you tell me more about your role in developing this system and the technologies you used?
+AI Recruiter:
+
+==================================[1m Ai Message [0m==================================
+
+You mentioned you worked on the "TalentTalk AI interview system." Could you elaborate on your specific contributions to this project and the technologies you utilized?
+AI Recruiter:
+
+==================================[1m Ai Message [0m==================================
+
+That's a very interesting project, Mohamed. It sounds like you addressed a real need for recruiters by automating parts of the interview process. Using Whisper for STT, ElevenLabs for TTS, Gemini for the LLM, LangGraph for agent logic, and Streamlit for deployment shows a good grasp of various relevant technologies.
+
+Now, to shift gears slightly, let's talk about the broader AI landscape.
+
+Question 49: What defines a Large Language Model (LLM)?
+AI Recruiter:
+
+==================================[1m Ai Message [0m==================================
+
+That's a concise and accurate definition. Thank you.
+
+Now, let's move on to the next question.
+
+Question 50: What challenges do LLMs face in deployment?
+AI Recruiter:
+
+==================================[1m Ai Message [0m==================================
+
+Thank you, Mohamed. That's a comprehensive answer, covering the key challenges.
+
+That's it for today. Thank you for your time and interest in Tech Innovators Inc. We'll be in touch regarding the next steps.
+AI Recruiter:
+
+==================================[1m Ai Message [0m==================================
+
+Evaluation:
+1. Introduction question: 7 - The candidate provided a concise introduction stating their role as an AI developer. However, it lacked personal details or specific experiences that could have made it more engaging.
+2. Project question: 8 - The candidate clearly explained the problem their project aimed to solve and listed the technologies used (Whisper, ElevenLabs, Gemini, LangGraph, Streamlit). This demonstrates a good understanding of the project's purpose and technical implementation.
+3. Technical question one: 9 - The candidate accurately defined Large Language Models (LLMs), mentioning their training on vast text corpora, large number of parameters, and capabilities in understanding and generating human-like language, as well as contextual learning.
+4. Technical question two: 9 - The candidate effectively identified and explained the key challenges faced in LLM deployment, including resource intensity, bias, interpretability, and privacy concerns, demonstrating a solid understanding of practical LLM implementation issues.
+
+User quit the interview.
