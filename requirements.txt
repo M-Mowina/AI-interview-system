@@ -3,29 +3,17 @@ streamlit>=1.24.0
 python-dotenv>=1.0.0
 
 # LangChain and LangGraph dependencies
-langchain==0.3.26
-langchain-chroma==0.2.4
-langchain-community==0.3.27
-langchain-core==0.3.66
-langchain-google-genai==2.1.5
-langchain-text-splitters==0.3.8
-langgraph==0.5.0
-langgraph-checkpoint==2.1.0
-langgraph-prebuilt==0.5.1
-langgraph-sdk==0.1.72
+langchain
+langchain-community
+langchain-core
+langchain-google-genai
+langchain-text-splitters
+langgraph
+langgraph-sdk
 
 # Google AI/Cloud dependencies
-google-ai-generativelanguage==0.6.18
-google-api-core==2.19.0
-google-api-python-client==2.129.0
-google-auth==2.29.0
-google-auth-httplib2==0.2.0
-google-auth-oauthlib==1.1.0
-google-crc32c==1.7.1
-google-genai==1.23.0
-google-generativeai==0.3.2
-google-pasta==0.2.0
-googleapis-common-protos==1.70.0
+google-genai
+google-generativeai
 
 # Vector stores
 langchain-chroma
